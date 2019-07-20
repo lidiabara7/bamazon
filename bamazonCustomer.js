@@ -36,9 +36,9 @@ function queryAllproducts() {
 };
 
 //function to prompt the user to choose the id of the product that they'd like to buy and the quantity that they'd like to buy
-async function start() {
+function start(res) {
   // query the database for all the products that are in the products table
-  await connection.query("SELECT * FROM products", function (err, res) {
+  connection.query("SELECT * FROM products", function (err, res) {
     if (err) throw err;
 
     inquirer
@@ -56,52 +56,45 @@ async function start() {
         }
       ])
       .then(function (answer) {
+
         var selection = answer.item;
         var quantity = answer.quantity;
+        var newQuantity = res[0].stock_quantity - quantity;
 
-        //do this if the quantity select is more then what is in stock
-         connection.query("SELECT * FROM products WHERE stock_quantity", quantity, function (err, res) {
-          if (err) throw err;
-
-          if (quantity > res[0].stock_quatity) {
-            console.log("Sorry! we have an insufficient quantity!")
-          }
-        });
-
-        //if the custumer enters a product id that is not valid
         connection.query("SELECT * FROM products WHERE Id=?", selection, function (err, res) {
           if (err) throw err;
-
           if (res.length === 0) {
             console.log("Sorry... That product id does not match our records. please try again");
           }
-
-          else {
-            var totalprice = quantity * res[0].price
-            console.log("The total cost of your purchase: " + "$" + totalprice)
-            console.log("You just purchased: " + res[0].product_name);
-
-            //to update the new quantity
-            var newQuantity = res[0].stock_quantity - quantity;
-            console.log(newQuantity)
-
-            // connection.query("UPDATE product SET stock_quantity =", newQuantity, "WHERE stock_quantity =", res[0].stock_quantity, function (err, res) {
-            // if (err) throw err;
-            // console.log(res)
-            //   console.log("Your order was succefully placed!")
-            //   console.log("thank you for shoping at Bamazon")
-            // })
-          }
-// i want ot replace the current amount - the qunatity from the inquirer
         })
-        connection.end();
-      })
+        if (newQuantity > 0) {
+          // connection.query("UPDATE products SET ? WHERE",
+          //   [
+          //     {
+          //       stock_quantity: newQuantity
+          //     },
+          //     {
+          //       id: selection
+          //     }
+          //   ],
+          //   function (err, res) {
+          //     if (err) throw err;
+          var totalprice = quantity * res[0].price
+          console.log("The total cost of your purchase: " + "$" + totalprice)
+          console.log("You just purchased: " + answer.quantity + " units of " + res[0].product_name);
+          console.log("thank you for shoping at Bamazon")
+          //   })
+        }
+
+        else {
+          console.log("Sorry! we have an insufficient quantity!");
+          queryAllproducts();
+        }
+   
+          connection.end();
+       
+        })
+
   })
 }
 
-
-
-
-// 8. However, if your store _does_ have enough of the product, you should fulfill the customer's order.
-//    * This means updating the SQL database to reflect the remaining quantity.
-//    * Once the update goes through, show the customer the total cost of their purchase.
